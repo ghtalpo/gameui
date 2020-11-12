@@ -29,6 +29,53 @@ var (
 	background image.Image
 )
 
+// Game implements ebiten.Game interface.
+type Game struct{}
+
+// NewGame is
+func NewGame() *Game {
+	return &Game{}
+}
+
+// Update proceeds the game state.
+// Update is called every tick (1/60 [s] by default).
+func (g *Game) Update() error {
+	if err := gui.Update(); err != nil {
+		return err
+	}
+
+	fps.SetText(fmt.Sprintf("%.1f", ebiten.CurrentFPS()))
+
+	if lastInc.Before(time.Now().Add(-1 * time.Second)) {
+		lastInc = time.Now()
+		mana.IncValue(2)
+		bar1.IncValue(5)
+		bar2.IncValue(3)
+		bar3.IncValue(1)
+		mana.SetTooltip(fmt.Sprintf("mana = %d", mana.GetValue()))
+	}
+	return nil
+}
+
+// Draw draws the game screen.
+// Draw is called every frame (typically 1/60[s] for 60Hz display).
+func (g *Game) Draw(screen *ebiten.Image) {
+	rect := image.Rect(0, 0, gui.Dimension.Width, gui.Dimension.Height)
+	frame := image.NewRGBA(rect)
+	draw.Draw(frame, rect, background, image.ZP, draw.Src)
+	draw.Draw(frame, rect, gui.Render(), image.ZP, draw.Over)
+
+	eframe := ebiten.NewImageFromImage(frame) //, ebiten.FilterNearest)
+	screen.DrawImage(eframe, &ebiten.DrawImageOptions{})
+	return
+}
+
+// Layout takes the outside size (e.g., the window size) and returns the (logical) screen size.
+// If you don't have to adjust the screen size with the outside size, just return a fixed size.
+func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+	return width, height
+}
+
 func init() {
 	var err error
 	background, err = ui.OpenImage("_resources/gfx/fiveyears.jpg")
@@ -85,36 +132,13 @@ func init() {
 }
 
 func main() {
-	if err := ebiten.Run(update, width, height, scale, "Tooltip (UI Demo)"); err != nil {
+	game := NewGame()
+
+	// Specify the window size as you like. Here, a doulbed size is specified.
+	ebiten.SetWindowSize(width*scale, height*scale)
+	ebiten.SetWindowTitle("Tooltip (UI Demo)")
+	// Call ebiten.RunGame to start your game loop.
+	if err := ebiten.RunGame(game); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func update(screen *ebiten.Image) error {
-	if err := gui.Update(); err != nil {
-		return err
-	}
-
-	fps.SetText(fmt.Sprintf("%.1f", ebiten.CurrentFPS()))
-
-	if lastInc.Before(time.Now().Add(-1 * time.Second)) {
-		lastInc = time.Now()
-		mana.IncValue(2)
-		bar1.IncValue(5)
-		bar2.IncValue(3)
-		bar3.IncValue(1)
-		mana.SetTooltip(fmt.Sprintf("mana = %d", mana.GetValue()))
-	}
-
-	rect := image.Rect(0, 0, gui.Dimension.Width, gui.Dimension.Height)
-	frame := image.NewRGBA(rect)
-	draw.Draw(frame, rect, background, image.ZP, draw.Src)
-	draw.Draw(frame, rect, gui.Render(), image.ZP, draw.Over)
-
-	eframe, err := ebiten.NewImageFromImage(frame, ebiten.FilterNearest)
-	if err != nil {
-		return err
-	}
-	screen.DrawImage(eframe, &ebiten.DrawImageOptions{})
-	return nil
 }
